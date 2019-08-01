@@ -83,10 +83,20 @@ namespace argos {
    /****************************************/
 
    void CSpace::Destroy() {
-      /* Remove all entities */
-      while(!m_vecRootEntities.empty()) {
-         CallEntityOperation<CSpaceOperationRemoveEntity, CSpace, void>(*this, *m_vecRootEntities.back());
-      }
+      /*
+       * Remove all entities. Note that we do not perform integrity checking
+       * for each entity like we do when entities are removed DURING
+       * simulation. This drastically increases teardown speed.
+       *
+       * When it is only a few entities to check, the checks are still
+       * relatively fast, but when you are doing it for ALL entities (like we
+       * are here), it scales exponentially. Plus, you don't *need* to do
+       * checking anymore--the simulation is over!
+       */
+     for (auto* c_entity : m_vecRootEntities) {
+       c_entity->Destroy();
+       delete c_entity;
+     } /* for(c_entity...) */
    }
 
    /****************************************/
