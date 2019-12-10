@@ -8,6 +8,8 @@
 #include <argos3/core/simulator/entity/embodied_entity.h>
 #include <argos3/core/simulator/entity/composable_entity.h>
 #include <argos3/plugins/simulator/entities/proximity_sensor_equipped_entity.h>
+#include <argos3/plugins/robots/generic/simulator/noise_injector_factory.h>
+#include <argos3/plugins/robots/generic/simulator/noise_injector.h>
 
 #include "epuck_proximity_default_sensor.h"
 
@@ -24,9 +26,12 @@ namespace argos {
    CEPuckProximityDefaultSensor::CEPuckProximityDefaultSensor() :
       m_pcEmbodiedEntity(nullptr),
       m_bShowRays(false),
-      m_pcRNG(nullptr),
-      m_bAddNoise(false),
       m_cSpace(CSimulator::GetInstance().GetSpace()) {}
+
+   /****************************************/
+   /****************************************/
+
+   CEPuckProximityDefaultSensor::~CEPuckProximityDefaultSensor() {}
 
    /****************************************/
    /****************************************/
@@ -37,7 +42,6 @@ namespace argos {
          m_pcControllableEntity = &(c_entity.GetComponent<CControllableEntity>("controller"));
          m_pcProximityEntity = &(c_entity.GetComponent<CProximitySensorEquippedEntity>("proximity_sensors"));
          m_pcProximityEntity->Enable();
-
          /* sensor is enabled by default */
          Enable();
       }
@@ -54,16 +58,13 @@ namespace argos {
          CCI_EPuckProximitySensor::Init(t_tree);
          /* Show rays? */
          GetNodeAttributeOrDefault(t_tree, "show_rays", m_bShowRays, m_bShowRays);
-         /* Parse noise level */
-         Real fNoiseLevel = 0.0f;
-         GetNodeAttributeOrDefault(t_tree, "noise_level", fNoiseLevel, fNoiseLevel);
-         if(fNoiseLevel < 0.0f) {
-            THROW_ARGOSEXCEPTION("Can't specify a negative value for the noise level of the proximity sensor");
-         }
-         else if(fNoiseLevel > 0.0f) {
-            m_bAddNoise = true;
-            m_cNoiseRange.Set(-fNoiseLevel, fNoiseLevel);
-            m_pcRNG = CRandom::CreateRNG("argos");
+         /* Parse noise injection */
+         if(NodeExists(t_tree, "noise")) {
+           TConfigurationNode& tNode = GetNode(t_tree, "noise");
+           m_pcNoiseInjector = CNoiseInjectorFactory::Create(tNode);
+           if (m_pcNoiseInjector) {
+             m_pcNoiseInjector->Init(tNode);
+           }
          }
       }
       catch(CARGoSException& ex) {
@@ -73,7 +74,7 @@ namespace argos {
 
    /****************************************/
    /****************************************/
-   
+
    void CEPuckProximityDefaultSensor::Update()
    {
       /* sensor is disabled--nothing to do */
@@ -118,9 +119,8 @@ namespace argos {
             }
          }
          /* Apply noise to the sensor */
-         if(m_bAddNoise)
-         {
-            m_tReadings[i].Value += m_pcRNG->Uniform(m_cNoiseRange);
+         if(m_pcNoiseInjector) {
+           m_tReadings[i].Value += m_pcNoiseInjector->InjectNoise();
          }
          /* Trunc the reading between 0 and 1 */
          UNIT.TruncValue(m_tReadings[i].Value);
@@ -161,11 +161,9 @@ namespace argos {
                    "Danesh Tarapore [daneshtarapore@gmail.com]",
                    "1.0",
                    "The E-Puck proximity sensor.",
-
                    "This sensor accesses the epuck proximity sensor. For a complete description\n"
                    "of its usage, refer to the ci_epuck_proximity_sensor.h interface. For the XML\n"
                    "configuration, refer to the default proximity sensor.\n",
-
                    "Usable"
 		  );
 

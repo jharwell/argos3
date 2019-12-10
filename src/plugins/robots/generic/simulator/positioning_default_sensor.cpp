@@ -7,6 +7,8 @@
 #include <argos3/core/simulator/simulator.h>
 #include <argos3/core/simulator/entity/embodied_entity.h>
 #include <argos3/core/simulator/entity/composable_entity.h>
+#include <argos3/plugins/robots/generic/simulator/noise_injector_factory.h>
+#include <argos3/plugins/robots/generic/simulator/noise_injector.h>
 
 #include "positioning_default_sensor.h"
 
@@ -16,9 +18,12 @@ namespace argos {
    /****************************************/
 
    CPositioningDefaultSensor::CPositioningDefaultSensor() :
-      m_pcEmbodiedEntity(nullptr),
-      m_pcRNG(nullptr),
-      m_bAddNoise(false) {}
+       m_pcEmbodiedEntity(NULL) {}
+
+   /****************************************/
+   /****************************************/
+
+   CPositioningDefaultSensor::~CPositioningDefaultSensor() {}
 
    /****************************************/
    /****************************************/
@@ -35,15 +40,27 @@ namespace argos {
    void CPositioningDefaultSensor::Init(TConfigurationNode& t_tree) {
       try {
          CCI_PositioningSensor::Init(t_tree);
-         /* Parse noise range */
-         GetNodeAttributeOrDefault(t_tree, "pos_noise_range", m_cPosNoiseRange, m_cPosNoiseRange);
-         GetNodeAttributeOrDefault(t_tree, "angle_noise_range", m_cAngleNoiseRange, m_cAngleNoiseRange);
-         GetNodeAttributeOrDefault(t_tree, "axis_noise_range", m_cAxisNoiseRange, m_cAxisNoiseRange);
-         if(m_cPosNoiseRange.GetSpan() != 0 ||
-            m_cAngleNoiseRange.GetSpan() != CRadians::ZERO ||
-            m_cAxisNoiseRange.GetSpan() != 0) {
-            m_bAddNoise = true;
-            m_pcRNG = CRandom::CreateRNG("argos");
+         /* Parse noise injection */
+         if(NodeExists(t_tree, "pos_noise")) {
+           TConfigurationNode& tNode = GetNode(t_tree, "pos_noise");
+           m_pcPosNoiseInjector = CNoiseInjectorFactory::Create(tNode);
+           if (m_pcPosNoiseInjector) {
+             m_pcPosNoiseInjector->Init(tNode);
+           }
+         }
+         if(NodeExists(t_tree, "angle_noise")) {
+           TConfigurationNode& tNode = GetNode(t_tree, "angle_noise");
+           m_pcAngleNoiseInjector = CNoiseInjectorFactory::Create(tNode);
+           if (m_pcAngleNoiseInjector) {
+             m_pcAngleNoiseInjector->Init(tNode);
+           }
+         }
+         if(NodeExists(t_tree, "axis_noise")) {
+           TConfigurationNode& tNode = GetNode(t_tree, "axis_noise");
+           m_pcAxisNoiseInjector = CNoiseInjectorFactory::Create(tNode);
+           if (m_pcAxisNoiseInjector) {
+             m_pcAxisNoiseInjector->Init(tNode);
+           }
          }
          /* sensor is enabled by default */
          Enable();
@@ -55,26 +72,38 @@ namespace argos {
 
    /****************************************/
    /****************************************/
-   
+
    void CPositioningDefaultSensor::Update() {
       /* sensor is disabled--nothing to do */
       if (IsDisabled()) {
         return;
       }
       m_sReading.Position = m_pcEmbodiedEntity->GetOriginAnchor().Position;
-      if(m_bAddNoise) {
-         m_sReading.Position += CVector3(m_pcRNG->Uniform(m_cPosNoiseRange),
-                                         m_pcRNG->Uniform(m_cPosNoiseRange),
-                                         m_pcRNG->Uniform(m_cPosNoiseRange));
-         m_pcEmbodiedEntity->GetOriginAnchor().Orientation.ToAngleAxis(m_cAngle, m_cAxis);
-         m_cAngle += CRadians(m_pcRNG->Uniform(m_cAngleNoiseRange));
-         m_cAxis += CVector3(m_pcRNG->Uniform(m_cAxisNoiseRange),
-                             m_pcRNG->Uniform(m_cAxisNoiseRange),
-                             m_pcRNG->Uniform(m_cAxisNoiseRange));
-         m_sReading.Orientation.FromAngleAxis(m_cAngle, m_cAxis);
-      }
-      else {
-         m_sReading.Orientation = m_pcEmbodiedEntity->GetOriginAnchor().Orientation;
+      bool bApplyNoise = (m_pcPosNoiseInjector ||
+                          m_pcAngleNoiseInjector ||
+                          m_pcAxisNoiseInjector);
+
+      if (bApplyNoise) {
+        if (m_pcPosNoiseInjector) {
+          m_sReading.Position += CVector3(m_pcPosNoiseInjector->InjectNoise(),
+                                          m_pcPosNoiseInjector->InjectNoise(),
+                                          m_pcPosNoiseInjector->InjectNoise());
+        }
+
+        m_pcEmbodiedEntity->GetOriginAnchor().Orientation.ToAngleAxis(m_cAngle,
+                                                                      m_cAxis);
+        if (m_pcAngleNoiseInjector) {
+          m_cAngle += CRadians(ToRadians(CDegrees(m_pcAngleNoiseInjector->InjectNoise())));
+        }
+
+        if (m_pcAxisNoiseInjector) {
+          m_cAxis += CVector3(m_pcAxisNoiseInjector->InjectNoise(),
+                              m_pcAxisNoiseInjector->InjectNoise(),
+                              m_pcAxisNoiseInjector->InjectNoise());
+        }
+        m_sReading.Orientation.FromAngleAxis(m_cAngle, m_cAxis);
+      } else {
+        m_sReading.Orientation = m_pcEmbodiedEntity->GetOriginAnchor().Orientation;
       }
    }
 
@@ -118,35 +147,27 @@ namespace argos {
 
                    "OPTIONAL XML CONFIGURATION\n\n"
 
-                   "It is possible to add uniform noise to the sensor, thus matching the\n"
-                   "characteristics of a real robot better. You can add noise through the\n"
-                   "attributes 'pos_noise_range', 'angle_noise_range', and 'axis_noise_range'.\n"
-                   "Attribute 'pos_noise_range' regulates the noise range on the position returned\n"
-                   "by the sensor. Attribute 'angle_noise_range' sets the noise range on the angle\n"
-                   "(values expressed in degrees). Attribute 'axis_noise_range' sets the noise for\n"
-                   "the rotation axis. Angle and axis are used to calculate a quaternion, which is\n"
-                   "the actual returned value for rotation.\n\n"
+                   "----------------------------------------\n"
+                   "Noise Injection\n"
+                   "----------------------------------------\n"
 
-                   "  <controllers>\n"
-                   "    ...\n"
-                   "    <my_controller ...>\n"
-                   "      ...\n"
-                   "      <sensors>\n"
-                   "        ...\n"
-                   "        <positioning implementation=\"default\"\n"
-                   "                     pos_noise_range=\"-0.1:0.2\"\n"
-                   "                     angle_noise_range=\"-10.5:13.7\"\n"
-                   "                     axis_noise_range=\"-0.3:0.4\" />\n"
-                   "        ...\n"
-                   "      </sensors>\n"
-                   "      ...\n"
-                   "    </my_controller>\n"
-                   "    ...\n"
-                   "  </controllers>\n\n"
+                   "It is possible to one or more of the following NOISE_TYPE child tags\n"
+                   "to positioning sensor configuration (all noise types are independent):\n"
+                   "['pos_noise', 'angle_noise', 'axis_noise']."
 
-                   "OPTIONAL XML CONFIGURATION\n\n"
-
-                   "None.\n",
+                   "Tag 'pos_noise' controls the noise applied to the position returned\n"
+                   "by the sensor. Tag 'angle_noise' controls the noise applied to the angle (values\n"
+                   "expressed in degrees) returned by the sensor. Tag 'axis_noise_range' controls the\n"
+                   "noise applied to the rotation axis returned by the sensor. Note that the angle\n"
+                   "AND axis sensor values are jointly used are used to calculate a quaternion, which\n"
+                   "is the actual returned value for rotation, so the 'angle_noise' and 'axis_noise'\n"
+                   "tags should (probably) appear together, if they appear at all.\n\n" +
+                   CNoiseInjector::GetQueryDocumentation({
+                       .strDocName = "positioning sensor",
+                           .strXMLParent = "positioning",
+                           .strXMLTag = "noise",
+                           .strSAAType = "sensor",
+                           .bShowExamples = true}),
 
                    "Usable"
 		  );

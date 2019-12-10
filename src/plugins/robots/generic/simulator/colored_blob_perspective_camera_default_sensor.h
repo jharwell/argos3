@@ -7,7 +7,11 @@ namespace argos {
    class CLEDEntity;
    class CControllableEntity;
    class CPerspectiveCameraLEDCheckOperation;
+   class CNoiseInjector;
+   class CUniformNoiseInjector;
 }
+
+#include <memory>
 
 #include <argos3/core/utility/math/rng.h>
 #include <argos3/core/simulator/space/space.h>
@@ -57,13 +61,18 @@ namespace argos {
 
    protected:
 
-      CPerspectiveCameraEquippedEntity*    m_pcCamEntity;
-      CControllableEntity*                 m_pcControllableEntity;
-      CEmbodiedEntity*                     m_pcEmbodiedEntity;
-      CPositionalIndex<CLEDEntity>*        m_pcLEDIndex;
-      CPositionalIndex<CEmbodiedEntity>*   m_pcEmbodiedIndex;
-      CPerspectiveCameraLEDCheckOperation* m_pcOperation;
-      bool                                 m_bShowRays;
+      CPerspectiveCameraEquippedEntity*     m_pcCamEntity;
+      CControllableEntity*                  m_pcControllableEntity;
+      CEmbodiedEntity*                      m_pcEmbodiedEntity;
+      CPositionalIndex<CLEDEntity>*         m_pcLEDIndex;
+      CPositionalIndex<CEmbodiedEntity>*    m_pcEmbodiedIndex;
+      CPerspectiveCameraLEDCheckOperation*  m_pcOperation;
+      bool                                  m_bShowRays;
+
+     /* Noise injectors */
+     std::unique_ptr<CNoiseInjector>        m_pcDistanceNoiseInjector;
+     std::unique_ptr<CUniformNoiseInjector> m_pcAzimuthNoiseInjector;
+     std::unique_ptr<CUniformNoiseInjector> m_pcInclinationNoiseInjector;
 
    };
 }

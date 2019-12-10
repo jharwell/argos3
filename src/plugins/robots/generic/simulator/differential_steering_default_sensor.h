@@ -9,15 +9,16 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 namespace argos {
    class CDifferentialSteeringDefaultSensor;
    class CWheeledEntity;
+   class CNoiseInjector;
+
 }
 
 #include <argos3/plugins/robots/generic/control_interface/ci_differential_steering_sensor.h>
-#include <argos3/core/utility/math/range.h>
-#include <argos3/core/utility/math/rng.h>
 #include <argos3/core/simulator/space/space.h>
 #include <argos3/core/simulator/sensor.h>
 
@@ -30,7 +31,7 @@ namespace argos {
 
       CDifferentialSteeringDefaultSensor();
 
-      virtual ~CDifferentialSteeringDefaultSensor() {}
+      virtual ~CDifferentialSteeringDefaultSensor();
 
       virtual void SetRobot(CComposableEntity& c_entity);
 
@@ -43,22 +44,16 @@ namespace argos {
    protected:
 
       /** Reference to wheeled entity associated to this sensor */
-      CWheeledEntity* m_pcWheeledEntity;
+      CWheeledEntity*                 m_pcWheeledEntity;
 
       /** The wheel velocity taken from the wheeled entity */
-      const Real* m_pfWheelVelocities;
+      const Real*                     m_pfWheelVelocities;
 
-      /** Random number generator */
-      CRandom::CRNG* m_pcRNG;
+      /** Distance noise injector */
+      std::unique_ptr<CNoiseInjector> m_pcDistNoiseInjector;
 
-      /** Whether to add noise or not */
-      bool m_bAddNoise;
-
-      /** Noise range on velocity */
-      CRange<Real> m_cVelNoiseRange;
-
-      /** Noise range on distance */
-      CRange<Real> m_cDistNoiseRange;
+      /** Velocity noise injector */
+      std::unique_ptr<CNoiseInjector> m_pcVelNoiseInjector;
    };
 
 }

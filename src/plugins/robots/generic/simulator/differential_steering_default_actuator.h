@@ -9,9 +9,11 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 namespace argos {
    class CDifferentialSteeringDefaultActuator;
+   class CNoiseInjector;
 }
 
 #include <argos3/plugins/robots/generic/control_interface/ci_differential_steering_actuator.h>
@@ -42,7 +44,7 @@ namespace argos {
       /**
        * @brief Destructor.
        */
-      virtual ~CDifferentialSteeringDefaultActuator() {}
+      virtual ~CDifferentialSteeringDefaultActuator();
 
       virtual void SetRobot(CComposableEntity& c_entity);
 
@@ -63,21 +65,15 @@ namespace argos {
       virtual void Reset();
 
    protected:
+      void ParseNoiseInjection(TConfigurationNode& t_tree);
 
-      CWheeledEntity* m_pcWheeledEntity;
-      
-      /** Random number generator */
-      CRandom::CRNG* m_pcRNG;
+      CWheeledEntity*                m_pcWheeledEntity;
 
       /** Noise bias for each wheel */
-      Real m_fNoiseBias[2];
-      
-      /** Noise factor average (Gaussian model) for each wheel  */
-      Real m_fNoiseFactorAvg[2];
+      Real                           m_fNoiseBias[2];
 
-      /** Noise factor stddev (Gaussian model) for each wheel  */
-      Real m_fNoiseFactorStdDev[2];
-
+      /** Noise factor for each wheel  */
+     std::unique_ptr<CNoiseInjector> m_cNoiseFactor[2];
    };
 
 }

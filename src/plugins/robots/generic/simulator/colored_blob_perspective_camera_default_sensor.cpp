@@ -6,6 +6,8 @@
 #include <argos3/plugins/simulator/entities/led_entity.h>
 #include <argos3/plugins/simulator/entities/perspective_camera_equipped_entity.h>
 #include <argos3/plugins/simulator/media/led_medium.h>
+#include <argos3/plugins/robots/generic/simulator/uniform_noise_injector.h>
+#include <argos3/plugins/robots/generic/simulator/noise_injector_factory.h>
 
 namespace argos {
 
@@ -22,18 +24,18 @@ namespace argos {
          CEmbodiedEntity& c_embodied_entity,
          CControllableEntity& c_controllable_entity,
          bool b_show_rays,
-         Real f_noise_std_dev) :
+         CNoiseInjector* pc_distance_noise_injector,
+         CNoiseInjector* pc_azimuth_noise_injector,
+         CNoiseInjector* pc_inclination_noise_injector) :
          m_tBlobs(t_blobs),
          m_cCamEntity(c_cam_entity),
          m_cEmbodiedEntity(c_embodied_entity),
          m_cControllableEntity(c_controllable_entity),
          m_bShowRays(b_show_rays),
-         m_fNoiseStdDev(f_noise_std_dev),
-         m_pcRNG(nullptr) {
+         m_pcDistanceNoiseInjector(pc_distance_noise_injector),
+         m_pcAzimuthNoiseInjector(pc_azimuth_noise_injector),
+         m_pcInclinationNoiseInjector(pc_inclination_noise_injector) {
          m_pcRootSensingEntity = &m_cEmbodiedEntity.GetRootEntity();
-         if(m_fNoiseStdDev > 0.0f) {
-            m_pcRNG = CRandom::CreateRNG("argos");
-         }
       }
       virtual ~CPerspectiveCameraLEDCheckOperation() {
          while(! m_tBlobs.empty()) {
@@ -70,6 +72,16 @@ namespace argos {
                /* Calculate the intersection point between the LED ray and the image plane */
                m_cLEDRelative.Normalize();
                m_cLEDRelative *= m_cCamEntity.GetFocalLength() / m_cLEDRelative.GetX();
+
+               /* If noise was setup, add it */
+               bool bAddNoise = (nullptr != m_pcDistanceNoiseInjector &&
+                                 nullptr != m_pcInclinationNoiseInjector &&
+                                 nullptr != m_pcAzimuthNoiseInjector);
+               if(bAddNoise) {
+                 m_cLEDRelative += CVector3(m_cLEDRelative.Length() * m_pcDistanceNoiseInjector->InjectNoise(),
+                                            CRadians(m_pcInclinationNoiseInjector->InjectNoise()),
+                                            CRadians(m_pcAzimuthNoiseInjector->InjectNoise()));
+               }
                /*
                 * The image plane is perpendicular to the local X axis
                 * Y points to the left, Z up, the origin is in the image center
@@ -105,7 +117,7 @@ namespace argos {
          }
          return true;
       }
-      
+
       void Setup() {
          /* Erase blobs */
          while(! m_tBlobs.empty()) {
@@ -117,9 +129,9 @@ namespace argos {
          /* Calculate inverse of camera orientation */
          m_cInvCameraOrient = m_cCamEntity.GetAnchor().Orientation.Inverse();
       }
-      
+
    private:
-      
+
       CCI_ColoredBlobPerspectiveCameraSensor::TBlobList& m_tBlobs;
       CPerspectiveCameraEquippedEntity& m_cCamEntity;
       CEmbodiedEntity& m_cEmbodiedEntity;
@@ -131,8 +143,9 @@ namespace argos {
       CVector3 m_cLEDRelative;
       SEmbodiedEntityIntersectionItem m_sIntersectionItem;
       CRay3 m_cOcclusionCheckRay;
-      Real m_fNoiseStdDev;
-      CRandom::CRNG* m_pcRNG;
+      CNoiseInjector* m_pcDistanceNoiseInjector;
+      CNoiseInjector* m_pcAzimuthNoiseInjector;
+      CNoiseInjector* m_pcInclinationNoiseInjector;
    };
 
    /****************************************/
@@ -174,9 +187,21 @@ namespace argos {
          CCI_ColoredBlobPerspectiveCameraSensor::Init(t_tree);
          /* Show rays? */
          GetNodeAttributeOrDefault(t_tree, "show_rays", m_bShowRays, m_bShowRays);
-         /* Parse noise */
-         Real fNoiseStdDev = 0.0f;
-         GetNodeAttributeOrDefault(t_tree, "noise_std_dev", fNoiseStdDev, fNoiseStdDev);
+         /* Parse noise injection */
+         if(NodeExists(t_tree, "noise")) {
+           TConfigurationNode& tNode = GetNode(t_tree, "noise");
+           m_pcDistanceNoiseInjector = CNoiseInjectorFactory::Create(tNode);
+           if (m_pcDistanceNoiseInjector) {
+             m_pcDistanceNoiseInjector->Init(tNode);
+           }
+           /* always uniform noise for azimuth and inclination angles */
+           m_pcInclinationNoiseInjector = std::make_unique<CUniformNoiseInjector>();
+           m_pcInclinationNoiseInjector->InitFromRange(CRange<Real>(0.0,
+                                                                    CRadians::PI.GetValue()));
+           m_pcAzimuthNoiseInjector = std::make_unique<CUniformNoiseInjector>();
+           m_pcAzimuthNoiseInjector->InitFromRange(CRange<Real>(0.0,
+                                                                CRadians::TWO_PI.GetValue()));
+         }
          /* Get LED medium from id specified in the XML */
          std::string strMedium;
          GetNodeAttribute(t_tree, "medium", strMedium);
@@ -188,7 +213,9 @@ namespace argos {
             *m_pcEmbodiedEntity,
             *m_pcControllableEntity,
             m_bShowRays,
-            fNoiseStdDev);
+            m_pcDistanceNoiseInjector.get(),
+            m_pcAzimuthNoiseInjector.get(),
+            m_pcInclinationNoiseInjector.get());
       }
       catch(CARGoSException& ex) {
          THROW_ARGOSEXCEPTION_NESTED("Error initializing the colored blob perspective camera default sensor", ex);
@@ -245,7 +272,6 @@ namespace argos {
 
    /****************************************/
    /****************************************/
-
    void CColoredBlobPerspectiveCameraDefaultSensor::Enable() {
       m_pcCamEntity->Enable();
       CCI_Sensor::Enable();
@@ -324,25 +350,25 @@ namespace argos {
                    "    ...\n"
                    "  </controllers>\n\n"
 
-                   "It is possible to add uniform noise to the blobs, thus matching the\n"
-                   "characteristics of a real robot better. This can be done with the attribute\n"
-                   "\"noise_std_dev\".\n\n"
+                   "----------------------------------------\n"
+                   "Noise Injection\n"
+                   "----------------------------------------\n" +
 
-                   "  <controllers>\n"
-                   "    ...\n"
-                   "    <my_controller ...>\n"
-                   "      ...\n"
-                   "      <sensors>\n"
-                   "        ...\n"
-                   "        <colored_blob_perspective_camera implementation=\"default\"\n"
-                   "                                         medium=\"leds\" />\n"
-                   "                                         noise_std_dev=\"0.1\" />\n"
-                   "        ...\n"
-                   "      </sensors>\n"
-                   "      ...\n"
-                   "    </my_controller>\n"
-                   "    ...\n"
-                   "  </controllers>\n",
+                   CNoiseInjector::GetQueryDocumentation({
+                       .strDocName = "camera sensor",
+                           .strXMLParent = "colored_blob_perspective_camera",
+                           .strXMLTag = "noise",
+                           .strSAAType = "sensor",
+                           .bShowExamples = true}) +
+
+
+                   "Each timestep the camera is enabled, a vector of randomly generated noise\n"
+                   "('model', Uniform(0, PI), Uniform(0, 2PI)) is added the (distance, inclination,\n"
+                   "azimuth) reading for each detected blob before its real position is converted to\n"
+                   "a pixel location. That is, the model of noise for the distance measure for the\n"
+                   "blob is configurable, and the type for the (inclination, azimuth) measures for the\n"
+                   "blob are always Uniform(). The color of the detected blob is unaffected by\n"
+                   "noise injection.\n\n",
 
                    "Usable"
       );

@@ -7,7 +7,11 @@ namespace argos {
    class CLEDEntity;
    class CControllableEntity;
    class COmnidirectionalCameraLEDCheckOperation;
+   class CNoiseInjector;
+   class CUniformNoiseInjector;
 }
+
+#include <memory>
 
 #include <argos3/core/utility/math/rng.h>
 #include <argos3/core/simulator/space/space.h>
@@ -36,9 +40,9 @@ namespace argos {
       virtual void Destroy();
 
       virtual void Enable();
-      
+
       virtual void Disable();
-			
+
       /**
        * Returns true if the rays must be shown in the GUI.
        * @return true if the rays must be shown in the GUI.
@@ -64,6 +68,9 @@ namespace argos {
       COmnidirectionalCameraLEDCheckOperation* m_pcOperation;
       bool                                     m_bShowRays;
 
+      /* Noise injectors */
+      std::unique_ptr<CNoiseInjector>          m_pcDistanceNoiseInjector;
+      std::unique_ptr<CUniformNoiseInjector>   m_pcAzimuthNoiseInjector;
    };
 }
 

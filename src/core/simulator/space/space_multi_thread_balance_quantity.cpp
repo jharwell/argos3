@@ -349,7 +349,6 @@ namespace argos {
         /* loop functions PostStep() iteration (maybe) */
         UpdateThreadIterateOverEntities(un_id, cEntityRange);
       } /* while(1) */
-
       pthread_cleanup_pop(1);
    } /* UpdateThread */
 

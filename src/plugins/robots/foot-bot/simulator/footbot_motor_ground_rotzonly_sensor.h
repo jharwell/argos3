@@ -9,16 +9,16 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 namespace argos {
    class CFootBotMotorGroundRotZOnlySensor;
    class CGroundSensorEquippedEntity;
    class CFloorEntity;
+   class CNoiseInjector;
 }
 
 #include <argos3/plugins/robots/foot-bot/control_interface/ci_footbot_motor_ground_sensor.h>
-#include <argos3/core/utility/math/range.h>
-#include <argos3/core/utility/math/rng.h>
 #include <argos3/core/simulator/space/space.h>
 #include <argos3/core/simulator/sensor.h>
 
@@ -31,7 +31,7 @@ namespace argos {
 
       CFootBotMotorGroundRotZOnlySensor();
 
-      virtual ~CFootBotMotorGroundRotZOnlySensor() {}
+      virtual ~CFootBotMotorGroundRotZOnlySensor();
 
       virtual void SetRobot(CComposableEntity& c_entity);
 
@@ -44,25 +44,19 @@ namespace argos {
    protected:
 
       /** Reference to embodied entity associated to this sensor */
-      CEmbodiedEntity* m_pcEmbodiedEntity;
+      CEmbodiedEntity*                m_pcEmbodiedEntity;
 
       /** Reference to floor entity */
-      CFloorEntity* m_pcFloorEntity;
+      CFloorEntity*                   m_pcFloorEntity;
 
       /** Reference to ground sensor equipped entity associated to this sensor */
-      CGroundSensorEquippedEntity* m_pcGroundSensorEntity;
-
-      /** Random number generator */
-      CRandom::CRNG* m_pcRNG;
-
-      /** Whether to add noise or not */
-      bool m_bAddNoise;
-
-      /** Noise range */
-      CRange<Real> m_cNoiseRange;
+      CGroundSensorEquippedEntity*    m_pcGroundSensorEntity;
 
       /** Reference to the space */
-      CSpace& m_cSpace;
+      CSpace&                         m_cSpace;
+
+      /** Noise injector */
+      std::unique_ptr<CNoiseInjector> m_pcNoiseInjector;
    };
 
 }

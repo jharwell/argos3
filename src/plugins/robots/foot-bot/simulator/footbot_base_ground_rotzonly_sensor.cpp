@@ -9,6 +9,8 @@
 #include <argos3/core/simulator/entity/embodied_entity.h>
 #include <argos3/core/simulator/entity/floor_entity.h>
 #include <argos3/plugins/simulator/entities/ground_sensor_equipped_entity.h>
+#include <argos3/plugins/robots/generic/simulator/noise_injector_factory.h>
+#include <argos3/plugins/robots/generic/simulator/noise_injector.h>
 
 #include "footbot_base_ground_rotzonly_sensor.h"
 
@@ -23,12 +25,15 @@ namespace argos {
    /****************************************/
 
    CFootBotBaseGroundRotZOnlySensor::CFootBotBaseGroundRotZOnlySensor() :
-      m_pcEmbodiedEntity(nullptr),
-      m_pcFloorEntity(nullptr),
-      m_pcGroundSensorEntity(nullptr),
-      m_pcRNG(nullptr),
-      m_bAddNoise(false),
+      m_pcEmbodiedEntity(NULL),
+      m_pcFloorEntity(NULL),
+      m_pcGroundSensorEntity(NULL),
       m_cSpace(CSimulator::GetInstance().GetSpace()) {}
+
+   /****************************************/
+   /****************************************/
+
+   CFootBotBaseGroundRotZOnlySensor::~CFootBotBaseGroundRotZOnlySensor() {}
 
    /****************************************/
    /****************************************/
@@ -46,16 +51,13 @@ namespace argos {
    void CFootBotBaseGroundRotZOnlySensor::Init(TConfigurationNode& t_tree) {
       try {
          CCI_FootBotBaseGroundSensor::Init(t_tree);
-         /* Parse noise level */
-         Real fNoiseLevel = 0.0f;
-         GetNodeAttributeOrDefault(t_tree, "noise_level", fNoiseLevel, fNoiseLevel);
-         if(fNoiseLevel < 0.0f) {
-            THROW_ARGOSEXCEPTION("Can't specify a negative value for the noise level of the foot-bot ground sensor");
-         }
-         else if(fNoiseLevel > 0.0f) {
-            m_bAddNoise = true;
-            m_cNoiseRange.Set(-fNoiseLevel, fNoiseLevel);
-            m_pcRNG = CRandom::CreateRNG("argos");
+         /* Parse noise injection */
+         if(NodeExists(t_tree, "noise")) {
+           TConfigurationNode& tNode = GetNode(t_tree, "noise");
+           m_pcNoiseInjector = CNoiseInjectorFactory::Create(tNode);
+           if (m_pcNoiseInjector) {
+             m_pcNoiseInjector->Init(tNode);
+           }
          }
          m_tReadings.resize(8);
          /* sensor is enabled by default */
@@ -98,8 +100,8 @@ namespace argos {
          /* Set the reading */
          m_tReadings[i].Value = cColor.ToGrayScale() / 255.0f;
          /* Apply noise to the sensor */
-         if(m_bAddNoise) {
-            m_tReadings[i].Value += m_pcRNG->Uniform(m_cNoiseRange);
+         if(m_pcNoiseInjector) {
+            m_tReadings[i].Value += m_pcNoiseInjector->InjectNoise();
          }
          /* Set the final reading */
          m_tReadings[i].Value = m_tReadings[i].Value < 0.5f ? 0.0f : 1.0f;

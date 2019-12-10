@@ -9,12 +9,15 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 namespace argos {
    class CRangeAndBearingMediumSensor;
    class CRABEquippedEntity;
    class CControllableEntity;
    class CRABMedium;
+   class CNoiseInjector;
+   class CUniformNoiseInjector;
 }
 
 #include <argos3/core/simulator/sensor.h>
@@ -30,7 +33,8 @@ namespace argos {
    public:
 
       CRangeAndBearingMediumSensor();
-      virtual ~CRangeAndBearingMediumSensor() {}
+
+      virtual ~CRangeAndBearingMediumSensor();
 
       virtual void SetRobot(CComposableEntity& c_entity);
 
@@ -64,14 +68,19 @@ namespace argos {
 
    private:
 
-      CRABEquippedEntity*  m_pcRangeAndBearingEquippedEntity;
-      CControllableEntity* m_pcControllableEntity;
-      CRABMedium*          m_pcRangeAndBearingMedium;
-      Real                 m_fDistanceNoiseStdDev;
-      Real                 m_fPacketDropProb;
-      CRandom::CRNG*       m_pcRNG;
-      CSpace&              m_cSpace;
-      bool                 m_bShowRays;
+     CRABEquippedEntity*                    m_pcRangeAndBearingEquippedEntity;
+     CControllableEntity*                   m_pcControllableEntity;
+     CRABMedium*                            m_pcRangeAndBearingMedium;
+     CSpace&                                m_cSpace;
+     bool                                   m_bShowRays;
+
+     /* Position noise injectors */
+     std::unique_ptr<CNoiseInjector>        m_pcDistanceNoiseInjector;
+     std::unique_ptr<CUniformNoiseInjector> m_pcInclinationNoiseInjector;
+     std::unique_ptr<CUniformNoiseInjector> m_pcAzimuthNoiseInjector;
+
+     /** Packet drop probability noise injector */
+     std::unique_ptr<CNoiseInjector>        m_pcPacketDropNoiseInjector;
    };
 }
 

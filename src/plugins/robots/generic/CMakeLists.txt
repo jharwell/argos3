@@ -121,7 +121,12 @@ if(ARGOS_BUILD_FOR_SIMULATOR)
     simulator/range_and_bearing_medium_sensor.cpp
     simulator/simple_radios_default_actuator.cpp
     simulator/simple_radios_default_sensor.cpp
-    simulator/tags_default_actuator.cpp)
+    simulator/tags_default_actuator.cpp
+    simulator/noise_injector.cpp
+    simulator/noise_injector_factory.cpp
+    simulator/gaussian_noise_injector.cpp
+    simulator/uniform_noise_injector.cpp)
+>>>>>>> enh(#12): Sensor and actuator noise injection interface
 endif(ARGOS_BUILD_FOR_SIMULATOR)
 
 #

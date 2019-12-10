@@ -9,15 +9,15 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 namespace argos {
    class CPositioningDefaultSensor;
    class CEmbodiedEntity;
+   class CNoiseInjector;
 }
 
 #include <argos3/plugins/robots/generic/control_interface/ci_positioning_sensor.h>
-#include <argos3/core/utility/math/range.h>
-#include <argos3/core/utility/math/rng.h>
 #include <argos3/core/simulator/space/space.h>
 #include <argos3/core/simulator/sensor.h>
 
@@ -30,7 +30,7 @@ namespace argos {
 
       CPositioningDefaultSensor();
 
-      virtual ~CPositioningDefaultSensor() {}
+      virtual ~CPositioningDefaultSensor();
 
       virtual void SetRobot(CComposableEntity& c_entity);
 
@@ -43,22 +43,16 @@ namespace argos {
    protected:
 
       /** Reference to embodied entity associated to this sensor */
-      CEmbodiedEntity* m_pcEmbodiedEntity;
+      CEmbodiedEntity*                m_pcEmbodiedEntity;
 
-      /** Random number generator */
-      CRandom::CRNG* m_pcRNG;
+      /** Position noise injector */
+      std::unique_ptr<CNoiseInjector> m_pcPosNoiseInjector;
 
-      /** Whether to add noise or not */
-      bool m_bAddNoise;
+      /** Angle noise injector */
+      std::unique_ptr<CNoiseInjector> m_pcAngleNoiseInjector;
 
-      /** Noise range on position */
-      CRange<Real> m_cPosNoiseRange;
-
-      /** Noise range on angle */
-      CRange<CRadians> m_cAngleNoiseRange;
-
-      /** Noise range on axis */
-      CRange<Real> m_cAxisNoiseRange;
+      /** Axis noise injector */
+      std::unique_ptr<CNoiseInjector> m_pcAxisNoiseInjector;
    };
 
 }

@@ -9,15 +9,16 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 namespace argos {
    class CProximityDefaultSensor;
    class CProximitySensorEquippedEntity;
+   class CNoiseInjector;
+
 }
 
 #include <argos3/plugins/robots/generic/control_interface/ci_proximity_sensor.h>
-#include <argos3/core/utility/math/range.h>
-#include <argos3/core/utility/math/rng.h>
 #include <argos3/core/simulator/space/space.h>
 #include <argos3/core/simulator/sensor.h>
 
@@ -30,7 +31,7 @@ namespace argos {
 
       CProximityDefaultSensor();
 
-      virtual ~CProximityDefaultSensor() {}
+      virtual ~CProximityDefaultSensor();
 
       virtual void SetRobot(CComposableEntity& c_entity);
 
@@ -66,28 +67,22 @@ namespace argos {
    protected:
 
       /** Reference to embodied entity associated to this sensor */
-      CEmbodiedEntity* m_pcEmbodiedEntity;
+      CEmbodiedEntity*                m_pcEmbodiedEntity;
 
       /** Reference to proximity sensor equipped entity associated to this sensor */
       CProximitySensorEquippedEntity* m_pcProximityEntity;
 
       /** Reference to controllable entity associated to this sensor */
-      CControllableEntity* m_pcControllableEntity;
+      CControllableEntity*            m_pcControllableEntity;
 
       /** Flag to show rays in the simulator */
-      bool m_bShowRays;
-
-      /** Random number generator */
-      CRandom::CRNG* m_pcRNG;
-
-      /** Whether to add noise or not */
-      bool m_bAddNoise;
-
-      /** Noise range */
-      CRange<Real> m_cNoiseRange;
+      bool                            m_bShowRays;
 
       /** Reference to the space */
-      CSpace& m_cSpace;
+      CSpace&                         m_cSpace;
+
+      /** Noise injector */
+     std::unique_ptr<CNoiseInjector>  m_pcNoiseInjector;
    };
 
 }

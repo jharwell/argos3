@@ -9,15 +9,15 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 namespace argos {
    class CEyeBotLightRotZOnlySensor;
    class CLightSensorEquippedEntity;
+   class CNoiseInjector;
 }
 
 #include <argos3/plugins/robots/eye-bot/control_interface/ci_eyebot_light_sensor.h>
-#include <argos3/core/utility/math/range.h>
-#include <argos3/core/utility/math/rng.h>
 #include <argos3/core/simulator/space/space.h>
 #include <argos3/core/simulator/sensor.h>
 
@@ -30,7 +30,7 @@ namespace argos {
 
       CEyeBotLightRotZOnlySensor();
 
-      virtual ~CEyeBotLightRotZOnlySensor() {}
+      virtual ~CEyeBotLightRotZOnlySensor();
 
       virtual void SetRobot(CComposableEntity& c_entity);
 
@@ -59,28 +59,22 @@ namespace argos {
    protected:
 
       /** Reference to embodied entity associated to this sensor */
-      CEmbodiedEntity* m_pcEmbodiedEntity;
+      CEmbodiedEntity*               m_pcEmbodiedEntity;
 
       /** Reference to light sensor equipped entity associated to this sensor */
-      CLightSensorEquippedEntity* m_pcLightEntity;
+      CLightSensorEquippedEntity*    m_pcLightEntity;
 
       /** Reference to controllable entity associated to this sensor */
-      CControllableEntity* m_pcControllableEntity;
+      CControllableEntity*           m_pcControllableEntity;
 
       /** Flag to show rays in the simulator */
-      bool m_bShowRays;
-
-      /** Random number generator */
-      CRandom::CRNG* m_pcRNG;
-
-      /** Whether to add noise or not */
-      bool m_bAddNoise;
-
-      /** Noise range */
-      CRange<Real> m_cNoiseRange;
+      bool                           m_bShowRays;
 
       /** Reference to the space */
-      CSpace& m_cSpace;
+      CSpace&                        m_cSpace;
+
+      /** Noise injector */
+     std::unique_ptr<CNoiseInjector> m_pcNoiseInjector;
    };
 
 }
