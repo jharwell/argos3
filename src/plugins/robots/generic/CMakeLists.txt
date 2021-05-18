@@ -126,7 +126,6 @@ if(ARGOS_BUILD_FOR_SIMULATOR)
     simulator/noise_injector_factory.cpp
     simulator/gaussian_noise_injector.cpp
     simulator/uniform_noise_injector.cpp)
->>>>>>> enh(#12): Sensor and actuator noise injection interface
 endif(ARGOS_BUILD_FOR_SIMULATOR)
 
 #
