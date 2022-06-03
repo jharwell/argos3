@@ -50,7 +50,7 @@ namespace argos {
          /** Calculates the value of YFieldOfView */
          void CalculateYFieldOfView();
       };
- 
+
       struct SKeyframe {
          SKeyframe(UInt32 un_step,
                    UInt32 un_placement_index,
@@ -130,15 +130,16 @@ namespace argos {
       void UpdateTimeline();
 
    private:
+      static const size_t N_CAMERAS = 36;
+
       bool m_bEnableTimeline;
       bool m_bHasTimeline;
       UInt32 m_unLoop;
       SPlacement m_sActivePlacement;
-      std::array<SPlacement, 12> m_arrPlacements;
+      std::array<SPlacement, N_CAMERAS> m_arrPlacements;
       std::vector<SKeyframe> m_vecKeyframes;
    };
 
 }
 
 #endif
-
