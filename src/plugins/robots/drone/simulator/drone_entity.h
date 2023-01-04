@@ -29,6 +29,11 @@ namespace argos {
 
       CDroneEntity();
 
+      CDroneEntity(const std::string& str_id,
+                   const std::string& str_controller_id,
+                   const CVector3& c_position = CVector3(),
+                   const CQuaternion& c_orientation = CQuaternion());
+
       virtual ~CDroneEntity() {}
 
       virtual void Init(TConfigurationNode& t_tree);

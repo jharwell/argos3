@@ -39,6 +39,34 @@ namespace argos {
    /****************************************/
    /****************************************/
 
+   CDroneEntity::CDroneEntity(const std::string& str_id,
+                              const std::string& str_controller_id,
+                              const CVector3& c_position,
+                              const CQuaternion& c_orientation) :
+       CComposableEntity(nullptr, str_id),
+       m_pcControllableEntity(nullptr),
+       m_pcDirectionalLEDEquippedEntity(nullptr),
+       m_pcEmbodiedEntity(nullptr),
+       m_pcFlightSystemEntity(nullptr),
+       m_pcSimpleRadioEquippedEntity(nullptr) {
+     try {
+       /*
+        * Create and init components
+        */
+       /*
+        * Embodied entity
+        * Better to put this first, because many other entities need this one
+        */
+       m_pcEmbodiedEntity = new CEmbodiedEntity(this, "body_0", c_position, c_orientation);
+       AddComponent(*m_pcEmbodiedEntity);
+     } catch(CARGoSException& ex) {
+       THROW_ARGOSEXCEPTION_NESTED("Failed to initialize entity \"" << GetId() << "\".", ex);
+     }
+   }
+
+   /****************************************/
+   /****************************************/
+
    void CDroneEntity::Init(TConfigurationNode& t_tree) {
       try {
          /* initialize the base class */
