@@ -55,3 +55,18 @@ endif(NOT DEFINED ARGOS_USE_DOUBLE)
 if(NOT DEFINED ARGOS_DOCUMENTATION)
   option(ARGOS_DOCUMENTATION "ON -> compile documentation, OFF -> dont'compile documentation" ON)
 endif(NOT DEFINED ARGOS_DOCUMENTATION)
+
+#
+# Export compile commands
+#
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+#
+# Configure CCache if available
+#
+find_program(CCACHE_FOUND ccache)
+if (CCACHE_FOUND)
+  message(STATUS "Using ccache")
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif()
